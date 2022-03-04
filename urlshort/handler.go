@@ -45,10 +45,10 @@ func MapHandler(pathsToUrls map[string]string, fallback http.Handler) http.Handl
 //
 // See MapHandler to create a similar http.HandlerFunc via
 // a mapping of paths to urls.
-func YAMLHandler(yml []byte, fallback http.Handler) http.HandlerFunc {
+func YAMLHandler(fileContents []byte, fallback http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		paths, err := ParseYAMLPaths(yml)
+		paths, err := ParsePaths(fileContents, yaml.Unmarshal)
 
 		if err != nil {
 			http.Redirect(w, r, "/error", http.StatusFound)
@@ -72,9 +72,9 @@ func YAMLHandler(yml []byte, fallback http.Handler) http.HandlerFunc {
 	}
 }
 
-func JSONHandler(json []byte, fallback http.Handler) http.HandlerFunc {
+func JSONHandler(fileContents []byte, fallback http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		paths, err := ParseJSONPaths(json)
+		paths, err := ParsePaths(fileContents, json.Unmarshal)
 
 		if err != nil {
 			http.Redirect(w, r, "/error", http.StatusFound)
@@ -98,15 +98,11 @@ func JSONHandler(json []byte, fallback http.Handler) http.HandlerFunc {
 	}
 }
 
-func ParseYAMLPaths(contents []byte) ([]UrlPath, error) {
-	pathsToURLs := make([]UrlPath, 0)
-	err := yaml.Unmarshal(contents, &pathsToURLs)
-	return pathsToURLs, err
-}
+type Unmarshaler func(data []byte, v interface{}) error
 
-func ParseJSONPaths(contents []byte) ([]UrlPath, error) {
+func ParsePaths(contents []byte, parser Unmarshaler) ([]UrlPath, error) {
 	pathsToURLs := make([]UrlPath, 0)
-	err := json.Unmarshal(contents, &pathsToURLs)
+	err := parser(contents, &pathsToURLs)
 	return pathsToURLs, err
 }
 
