@@ -12,7 +12,7 @@ import (
 
 func main() {
 
-	filename := flag.String("file", "urls.yaml", "File that contains a list of url mappings.")
+	filename := flag.String("file", "urls.json", "File that contains a list of url mappings.")
 	flag.Parse()
 
 	mux := defaultMux()
@@ -22,9 +22,11 @@ func main() {
 
 	mapHandler := urlshort.MapHandler(urlMappings, mux)
 
-	yamlHandler := urlshort.YAMLHandler(ReadYAMLFile(*filename), mapHandler)
+	yamlHandler := urlshort.YAMLHandler(ReadFile(*filename), mapHandler)
 
-	http.ListenAndServe("localhost:3000", yamlHandler)
+	jsonHandler := urlshort.JSONHandler(ReadFile(*filename), yamlHandler)
+
+	http.ListenAndServe("localhost:3000", jsonHandler)
 }
 
 func defaultMux() *http.ServeMux {
@@ -37,10 +39,10 @@ func Hello(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Hello World!")
 }
 
-func ReadYAMLFile(filename string) []byte {
-	contents, err := ioutil.ReadFile("urls.yaml")
+func ReadFile(filename string) []byte {
+	contents, err := ioutil.ReadFile(filename)
 	if err != nil {
-		log.Printf("yamlFile.Get err   #%v ", err)
+		log.Printf("file.Get err   #%v ", err)
 	}
 
 	return contents

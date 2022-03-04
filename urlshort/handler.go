@@ -1,14 +1,15 @@
 package urlshort
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"gopkg.in/yaml.v2"
 )
 
-type YAMLUrlPath struct {
-	Path string `yaml:"path"`
-	Url  string `yaml:"url"`
+type UrlPath struct {
+	Path string
+	Url  string
 }
 
 // MapHandler will return an http.HandlerFunc (which also
@@ -46,7 +47,15 @@ func MapHandler(pathsToUrls map[string]string, fallback http.Handler) http.Handl
 // a mapping of paths to urls.
 func YAMLHandler(yml []byte, fallback http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		yamlMappings, err := ImportYAMLMappingIntoMap(yml)
+
+		paths, err := ParseYAMLPaths(yml)
+
+		if err != nil {
+			http.Redirect(w, r, "/error", http.StatusFound)
+			return
+		}
+
+		mappings, err := ImportPathsIntoMap(paths)
 
 		if err != nil {
 			http.Redirect(w, r, "/error", http.StatusFound)
@@ -54,7 +63,7 @@ func YAMLHandler(yml []byte, fallback http.Handler) http.HandlerFunc {
 		}
 
 		reqPath := r.URL.Path
-		if dest, ok := yamlMappings[reqPath]; ok {
+		if dest, ok := mappings[reqPath]; ok {
 			http.Redirect(w, r, dest.Url, http.StatusFound)
 			return
 		}
@@ -63,23 +72,50 @@ func YAMLHandler(yml []byte, fallback http.Handler) http.HandlerFunc {
 	}
 }
 
-func ImportYAMLMappingIntoMap(contents []byte) (map[string]YAMLUrlPath, error) {
-	urlPaths, err := ParseYAMLPaths(contents)
-	if err != nil {
-		return nil, err
-	}
+func JSONHandler(json []byte, fallback http.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		paths, err := ParseJSONPaths(json)
 
-	yamlMappings := make(map[string]YAMLUrlPath)
+		if err != nil {
+			http.Redirect(w, r, "/error", http.StatusFound)
+			return
+		}
+
+		mappings, err := ImportPathsIntoMap(paths)
+
+		if err != nil {
+			http.Redirect(w, r, "/error", http.StatusFound)
+			return
+		}
+
+		reqPath := r.URL.Path
+		if dest, ok := mappings[reqPath]; ok {
+			http.Redirect(w, r, dest.Url, http.StatusFound)
+			return
+		}
+
+		fallback.ServeHTTP(w, r)
+	}
+}
+
+func ParseYAMLPaths(contents []byte) ([]UrlPath, error) {
+	pathsToURLs := make([]UrlPath, 0)
+	err := yaml.Unmarshal(contents, &pathsToURLs)
+	return pathsToURLs, err
+}
+
+func ParseJSONPaths(contents []byte) ([]UrlPath, error) {
+	pathsToURLs := make([]UrlPath, 0)
+	err := json.Unmarshal(contents, &pathsToURLs)
+	return pathsToURLs, err
+}
+
+func ImportPathsIntoMap(urlPaths []UrlPath) (map[string]UrlPath, error) {
+	yamlMappings := make(map[string]UrlPath)
 
 	for _, value := range urlPaths {
 		yamlMappings[value.Path] = value
 	}
 
 	return yamlMappings, nil
-}
-
-func ParseYAMLPaths(contents []byte) ([]YAMLUrlPath, error) {
-	pathsToURLs := make([]YAMLUrlPath, 0)
-	err := yaml.Unmarshal(contents, &pathsToURLs)
-	return pathsToURLs, err
 }
