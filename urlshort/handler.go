@@ -1,13 +1,12 @@
 package urlshort
 
 import (
-	"log"
 	"net/http"
 
 	"gopkg.in/yaml.v2"
 )
 
-type YAMLUrlMapping struct {
+type YAMLUrlPath struct {
 	Path string `yaml:"path"`
 	Url  string `yaml:"url"`
 }
@@ -64,12 +63,22 @@ func YAMLHandler(yml []byte, fallback http.Handler) http.HandlerFunc {
 	}
 }
 
-func ImportYAMLMappingIntoMap(contents []byte) (map[string]YAMLUrlMapping, error) {
-	yamlMappings := make(map[string]YAMLUrlMapping)
-	err := yaml.Unmarshal(contents, &yamlMappings)
+func ParseYAMLPaths(contents []byte) ([]YAMLUrlPath, error) {
+	pathsToURLs := make([]YAMLUrlPath, 0)
+	err := yaml.Unmarshal(contents, &pathsToURLs)
+	return pathsToURLs, err
+}
+
+func ImportYAMLMappingIntoMap(contents []byte) (map[string]YAMLUrlPath, error) {
+	urlPaths, err := ParseYAMLPaths(contents)
 	if err != nil {
-		log.Fatalf("Unmarshal: %v", err)
 		return nil, err
+	}
+
+	yamlMappings := make(map[string]YAMLUrlPath)
+
+	for _, value := range urlPaths {
+		yamlMappings[value.Path] = value
 	}
 
 	return yamlMappings, nil
