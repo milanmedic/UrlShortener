@@ -63,12 +63,6 @@ func YAMLHandler(yml []byte, fallback http.Handler) http.HandlerFunc {
 	}
 }
 
-func ParseYAMLPaths(contents []byte) ([]YAMLUrlPath, error) {
-	pathsToURLs := make([]YAMLUrlPath, 0)
-	err := yaml.Unmarshal(contents, &pathsToURLs)
-	return pathsToURLs, err
-}
-
 func ImportYAMLMappingIntoMap(contents []byte) (map[string]YAMLUrlPath, error) {
 	urlPaths, err := ParseYAMLPaths(contents)
 	if err != nil {
@@ -82,4 +76,10 @@ func ImportYAMLMappingIntoMap(contents []byte) (map[string]YAMLUrlPath, error) {
 	}
 
 	return yamlMappings, nil
+}
+
+func ParseYAMLPaths(contents []byte) ([]YAMLUrlPath, error) {
+	pathsToURLs := make([]YAMLUrlPath, 0)
+	err := yaml.Unmarshal(contents, &pathsToURLs)
+	return pathsToURLs, err
 }
